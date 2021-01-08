@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>EXIF example with inline EXIF info</title>
+</head>
+<body>
+
+    <img src="DSCN0614_small.jpg" id="img1" />
+    <pre>Make and model: <span id="makeAndModel"></span></div>
+    <br/>
+
+    <img src="Bush-dog.jpg" id="img2" />
+    <pre id="allMetaDataSpan"></pre>
+    <br/>
+
+    <img src="/data/Photo-A.jpg" id="img3" /><br/>
+    <pre id="img3WithXmpMetaData"></pre>
+
+    <script type="text/javascript" src="js/exif.js"></script>
+    <script>
+        "use strict";
+        window.onload=getExif;
+
+        function getExif() {
+            var img1 = document.getElementById("img1");
+            console.log(img1);
+            EXIF.getData(img1, function() {
+                var make = EXIF.getTag(this, "Make");
+                var model = EXIF.getTag(this, "Model");
+                var makeAndModel = document.getElementById("makeAndModel");
+                makeAndModel.innerHTML = `${make} ${model}`;
+            });
+
+            var img2 = document.getElementById("img2");
+            EXIF.getData(img2, function() {
+                var allMetaData = EXIF.getAllTags(this);
+                var allMetaDataSpan = document.getElementById("allMetaDataSpan");
+                allMetaDataSpan.innerHTML = JSON.stringify(allMetaData, null, "\t");
+            });
+
+            var img3 = document.getElementById("img3");
+            // EXIF.enableXmp();
+            EXIF.getData(img3, function() {
+                var allMetaData = EXIF.getAllTags(this);
+                var img3WithXmpMetaData = document.getElementById("img3WithXmpMetaData");
+                img3WithXmpMetaData.innerHTML = JSON.stringify(allMetaData, null, "\t");
+            });
+            
+            var testFilePath = "/data/Photo-A.jpg";
+            var obj_s;
+            var http = new XMLHttpRequest();
+            http.open("GET", testFilePath, true);
+            http.responseType = "blob";
+            http.onload = function(e) {
+                if (this.status === 200) {
+                    var image = new Image();
+                    image.onload = function() {
+                        EXIF.getData(image, function() {
+                            var allMetaData = EXIF.getAllTags(this);
+                            var DMSlat = allMetaData.GPSLatitude;
+                            var lat= ConvertDMSToDD(DMSlat[0],DMSlat[1],DMSlat[2],allMetaData.GPSLatitudeRef);
+                            var DMSlon = allMetaData.GPSLongitude;
+                            var lon= ConvertDMSToDD(DMSlon[0],DMSlon[1],DMSlon[2],allMetaData.GPSLongitudeRef);
+                            console.log(lat);
+                            console.log(lon);
+                            console.log(testFilePath);
+                            var obj = new Object();
+                            obj.lat = lat;
+                            obj.lng = lon;
+                            obj.thumbnail = testFilePath;
+                            obj.url= testFilePath;
+                            obj.video="";
+                            obj.caption="";            
+                            obj_s = JSON.stringify(obj);
+                            console.log(obj_s);
+                        });
+                    };
+                    image.src = URL.createObjectURL(http.response);
+
+                }
+            };
+            http.send();
+            console.log(obj_s);
+
+            function ConvertDMSToDD(degrees, minutes, seconds, direction){
+                var dd = degrees + minutes/60 + seconds/(60*60);
+            
+                if (direction == "S" || direction == "W") {
+                    dd = dd * -1;
+                } // Don't do anything for N or E
+                return dd;
+            }
+            
+
+        }
+    </script>
+</body>
+</html>

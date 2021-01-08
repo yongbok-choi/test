@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Photo Map</title>
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+	<meta name="viewport" content="user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, width=device-width">
+	<meta name="robots" content="noindex">
+	<meta name="format-detection" content="telephone=no">
+	<meta property="og:image" content="route.png" />
+	<!--STEP 1: CSS 추가하기 -->
+	<!--CDN 방식 -->
+	<!--<link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.3/dist/leaflet.css"/>-->
+	<!-- Download 방식 -->
+	<link rel="stylesheet" href="css/leaflet@1.3.3/leaflet.css"/>
+	<!--STEP 3: 지도 영역 관련 CSS 추가하기 -->
+	<link rel="stylesheet" href="css/main.css"/>
+	<!--STEP 2: JS 추가하기 -->
+	<!--CDN 방식 -->
+	<!--<script src="https://unpkg.com/leaflet@1.3.3/dist/leaflet.js"></script>-->
+	<!-- Download 방식 -->
+
+	
+	<!-- <link rel="stylesheet" href="lib/leaflet/leaflet.css" /> -->
+	<link rel="stylesheet" href="css/MarkerCluster.css" />	
+	<link rel="stylesheet" href="css/Leaflet.Photo.css" />	
+	<link rel="stylesheet" href="css/map.css" />
+
+	<script src="js/leaflet@1.3.3/leaflet.js"></script>
+	<!-- Leaflet Plugins: Leaflet.KoreanTmsProviders 추가  -->
+   	<script src="js/KoreanTmsProviders/lib/proj4.js"></script>
+   	<script src="js/KoreanTmsProviders/lib/proj4leaflet.js"></script>
+	<script src="js/KoreanTmsProviders/src/Leaflet.KoreanTmsProviders.js"></script>  
+	<script src="js/reqwest.min.js"></script>
+	<script src="js/leaflet.markercluster.js"></script>		
+	<script src="js/Leaflet.Photo.js"></script>
+	<script src="js/exif.js"></script>
+
+</head>
+<body>
+	<div id="map"></div>
+	<script>
+	var map = new L.Map('map', {
+			 center: new L.LatLng(36.1358642, 128.0785804), //중심점 : 김천 위경도 좌표
+			 zoom: 7,	//Leaflet.KoreanTmsProviders.js : resolutions기준 줌 레벨(Level 12)
+			 crs: L.Proj.CRS.Google, //Leaflet.KoreanTmsProviders.js : 새로 정의된 Daum Map CRS
+			 worldCopyJump: false,  //https://leafletjs.com/reference-1.3.2.html#map-worldcopyjump 참조
+		});
+		var baseLayers = L.tileLayer.koreaProvider('GoogleMap.Street').addTo(map);
+
+	// L.tileLayer('http://opencache.statkart.no/gatekeeper/gk/gk.open_gmaps?layers=norges_grunnkart&zoom={z}&x={x}&y={y}', {
+	// 	attribution: '&copy; <a href="http://kartverket.no/">Kartverket</a>'
+	// }).addTo(map);
+
+	var photoLayer = L.photo.cluster().on('click', function (evt) {
+		var photo = evt.layer.photo,
+			template = '<img src="{url}" width="300" height="300" /></a><p>{caption}</p>';
+
+		if (photo.video && (!!document.createElement('video').canPlayType('video/mp4; codecs=avc1.42E01E,mp4a.40.2'))) {
+			template = '<video autoplay controls poster="{url}" width="300" height="300"><source src="{video}" type="video/mp4"/></video>';
+		}; 
+
+		evt.layer.bindPopup(L.Util.template(template, photo), {
+			className: 'leaflet-popup-photo',
+			minWidth: 300
+		}).openPopup();
+	});
+
+	//test
+	
+	var testFilePath = "./data/Photo-A.jpg";
+	var obj_s;
+	
+	function ConvertDMSToDD(degrees, minutes, seconds, direction){
+		var dd = degrees + minutes/60 + seconds/(60*60);
+	
+		if (direction == "S" || direction == "W") {
+			dd = dd * -1;
+		} // Don't do anything for N or E
+		return dd;
+	}
+			
+			
+	var http = new XMLHttpRequest();
+	http.open("GET", testFilePath, true);
+	http.responseType = "blob";
+	http.onload = function(e) {
+		if (this.status === 200) {
+			var image = new Image();
+			image.onload = function() {
+				EXIF.getData(image, function() {
+					var allMetaData = EXIF.getAllTags(this);
+					var DMSlat = allMetaData.GPSLatitude;
+					var lat= ConvertDMSToDD(DMSlat[0],DMSlat[1],DMSlat[2],allMetaData.GPSLatitudeRef);
+					var DMSlon = allMetaData.GPSLongitude;
+					var lon= ConvertDMSToDD(DMSlon[0],DMSlon[1],DMSlon[2],allMetaData.GPSLongitudeRef);
+					console.log(lat);
+					console.log(lon);
+					console.log(testFilePath);
+					var obj = new Object();
+					obj.lat = lat;
+					obj.lng = lon;
+					obj.thumbnail = testFilePath;
+					obj.url= testFilePath;
+					obj.video="";
+					obj.caption="";            
+					obj_s = JSON.stringify(obj);
+					console.log(obj_s);
+					var b = Array();
+					b.push(obj_s);
+					photoLayer.add(b).addTo(map);
+					map.fitBounds(photoLayer.getBounds());
+				});
+			};
+			image.src = URL.createObjectURL(http.response);
+
+		}
+	};
+	http.send();
+	console.log(obj_s);
+	console.log("aa");
+	// var a = new Array();
+	// a.push(obj_s);
+	// console.log(a);
+	// var a = {"lat":35.23489777777778,"lng":129.08212388888887,"thumbnail":"./data/Photo-A.jpg","url":"./data/Photo-A.jpg","video":"","caption":""};
+	var c = {"lat":35.23489777777778,"lng":129.08212388888887,"thumbnail":"./data/Photo-A.jpg","url":"./data/Photo-A.jpg","video":"","caption":""};
+	
+	
+	// reqwest({
+	// 	url: 'http://turban.cartodb.com/api/v2/sql?q=SELECT latitude AS lat, longitude AS lng, image_thumb AS thumbnail, image_standard AS url, video_standard AS video, caption FROM instagram WHERE the_geom %26%26 ST_SetSRID(ST_MakeBox2D(ST_Point(5.727, 59.124), ST_Point(5.924, 59.305)), 4326)',
+	// 	success: function (data) {
+	// 		photoLayer.add(data.rows).addTo(map);
+	// 		map.fitBounds(photoLayer.getBounds());
+	// 	}
+	// });
+
+	</script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "photo-map",
+  "version": "1.0.0",
+  "description": "photo-map",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "yongbok.choi",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "exif-js": "^2.3.0",
+    "express": "^4.17.1",
+    "fs": "0.0.1-security",
+    "http": "0.0.1-security",
+    "leaflet": "^1.7.1"
+  }
+}
