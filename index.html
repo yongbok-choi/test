@@ -7,34 +7,20 @@
 	<meta name="robots" content="noindex">
 	<meta name="format-detection" content="telephone=no">
 	<meta property="og:image" content="route.png" />
-	<!--STEP 1: CSS 추가하기 -->
-	<!--CDN 방식 -->
-	<!--<link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.3/dist/leaflet.css"/>-->
-	<!-- Download 방식 -->
-	<link rel="stylesheet" href="css/leaflet@1.3.3/leaflet.css"/>
-	<!--STEP 3: 지도 영역 관련 CSS 추가하기 -->
-	<link rel="stylesheet" href="css/main.css"/>
-	<!--STEP 2: JS 추가하기 -->
-	<!--CDN 방식 -->
-	<!--<script src="https://unpkg.com/leaflet@1.3.3/dist/leaflet.js"></script>-->
-	<!-- Download 방식 -->
 
-	
-	<!-- <link rel="stylesheet" href="lib/leaflet/leaflet.css" /> -->
+	<link rel="stylesheet" href="css/leaflet@1.3.3/leaflet.css"/>
+	<link rel="stylesheet" href="css/main.css"/>
 	<link rel="stylesheet" href="css/MarkerCluster.css" />	
 	<link rel="stylesheet" href="css/Leaflet.Photo.css" />	
 	<link rel="stylesheet" href="css/map.css" />
 
 	<script src="js/leaflet@1.3.3/leaflet.js"></script>
-	<!-- Leaflet Plugins: Leaflet.KoreanTmsProviders 추가  -->
    	<script src="js/KoreanTmsProviders/lib/proj4.js"></script>
    	<script src="js/KoreanTmsProviders/lib/proj4leaflet.js"></script>
 	<script src="js/KoreanTmsProviders/src/Leaflet.KoreanTmsProviders.js"></script>  
 	<script src="js/reqwest.min.js"></script>
 	<script src="js/leaflet.markercluster.js"></script>		
 	<script src="js/Leaflet.Photo.js"></script>
-	<script src="js/exif.js"></script>
-
 </head>
 <body>
 	<div id="map"></div>
@@ -42,8 +28,9 @@
 	var map = new L.Map('map', {
 			 center: new L.LatLng(36.1358642, 128.0785804), //중심점 : 김천 위경도 좌표
 			 zoom: 7,	//Leaflet.KoreanTmsProviders.js : resolutions기준 줌 레벨(Level 12)
+			 minZoom:3,
 			 crs: L.Proj.CRS.Google, //Leaflet.KoreanTmsProviders.js : 새로 정의된 Daum Map CRS
-			 worldCopyJump: false,  //https://leafletjs.com/reference-1.3.2.html#map-worldcopyjump 참조
+			 worldCopyJump: true,  //https://leafletjs.com/reference-1.3.2.html#map-worldcopyjump 참조
 		});
 		var baseLayers = L.tileLayer.koreaProvider('GoogleMap.Street').addTo(map);
 
@@ -65,64 +52,114 @@
 		}).openPopup();
 	});
 
-	//test
-	
-	var testFilePath = "./data/Photo-A.jpg";
-	var obj_s;
-	
-	function ConvertDMSToDD(degrees, minutes, seconds, direction){
-		var dd = degrees + minutes/60 + seconds/(60*60);
-	
-		if (direction == "S" || direction == "W") {
-			dd = dd * -1;
-		} // Don't do anything for N or E
-		return dd;
-	}
-			
-			
-	var http = new XMLHttpRequest();
-	http.open("GET", testFilePath, true);
-	http.responseType = "blob";
-	http.onload = function(e) {
-		if (this.status === 200) {
-			var image = new Image();
-			image.onload = function() {
-				EXIF.getData(image, function() {
-					var allMetaData = EXIF.getAllTags(this);
-					var DMSlat = allMetaData.GPSLatitude;
-					var lat= ConvertDMSToDD(DMSlat[0],DMSlat[1],DMSlat[2],allMetaData.GPSLatitudeRef);
-					var DMSlon = allMetaData.GPSLongitude;
-					var lon= ConvertDMSToDD(DMSlon[0],DMSlon[1],DMSlon[2],allMetaData.GPSLongitudeRef);
-					console.log(lat);
-					console.log(lon);
-					console.log(testFilePath);
-					var obj = new Object();
-					obj.lat = lat;
-					obj.lng = lon;
-					obj.thumbnail = testFilePath;
-					obj.url= testFilePath;
-					obj.video="";
-					obj.caption="";            
-					obj_s = JSON.stringify(obj);
-					console.log(obj_s);
-					var b = Array();
-					b.push(obj_s);
-					photoLayer.add(b).addTo(map);
-					map.fitBounds(photoLayer.getBounds());
-				});
-			};
-			image.src = URL.createObjectURL(http.response);
-
+	var data ='<%- data %>';
+	var photoJson = Array();
+	var startIndex;
+	var endIndex;
+	var jsonText;
+	var jsonData;
+	//data = data.replace('\\', '/');
+	//data = data.replace('\\', '/');
+	for(var i=0; i<data.length; i++){
+		if(data[i]=='{') startIndex=i;
+//		if(data[i]=='\\') data = data.replace('\\', '/');
+		if(data[i]=='}'){
+			endIndex = i+1;
+			jsonText=data.substring(startIndex,endIndex);
+//			console.log(jsonText);
+			jsonData= JSON.parse(jsonText);
+			photoJson.push(jsonData);
 		}
-	};
-	http.send();
-	console.log(obj_s);
-	console.log("aa");
+	}
+	photoLayer.add(photoJson).addTo(map);
+	map.fitBounds(photoLayer.getBounds());
+	// var socket = io();
+	// socket.on("chat",function(data){
+	// 	console.log(data);
+	// });
+
+	// var fs = require('fs');
+	// var file = fs.readdirSync('/assets/photos/Photo-A.jpg');
+	// EXIF.getData(file, function() {
+	// 	var allMetaData = EXIF.getAllTags(this);
+	// 	var DMSlat = allMetaData.GPSLatitude;
+	// 	var lat= ConvertDMSToDD(DMSlat[0],DMSlat[1],DMSlat[2],allMetaData.GPSLatitudeRef);
+	// 	var DMSlon = allMetaData.GPSLongitude;
+	// 	var lon= ConvertDMSToDD(DMSlon[0],DMSlon[1],DMSlon[2],allMetaData.GPSLongitudeRef);
+	// 	console.log(lat);
+	// 	console.log(lon);
+	// 	console.log(testFilePath);
+	// 	var obj = new Object();
+	// 	obj.lat = lat;
+	// 	obj.lng = lon;
+	// 	obj.thumbnail = testFilePath;
+	// 	obj.url= testFilePath;
+	// 	obj.video="";
+	// 	obj.caption="";            
+	// 	obj_s = JSON.stringify(obj);
+	// 	console.log(obj_s);
+	// 	var b = Array();
+	// 	b.push(obj_s);
+	// 	//photoLayer.add(b).addTo(map);
+	// 	console.log(b);
+	// 	//map.fitBounds(photoLayer.getBounds());
+	// });
+
+
+
+
+
+
+
+
+
+
+
+			
+	// var http = new XMLHttpRequest();
+	// http.open("GET", testFilePath, true);
+	// http.responseType = "blob";
+	// http.onload = function(e) {
+	// 	if (this.status === 200) {
+	// 		var image = new Image();
+	// 		image.onload = function() {
+	// 			EXIF.getData(image, function() {
+	// 				var allMetaData = EXIF.getAllTags(this);
+	// 				var DMSlat = allMetaData.GPSLatitude;
+	// 				var lat= ConvertDMSToDD(DMSlat[0],DMSlat[1],DMSlat[2],allMetaData.GPSLatitudeRef);
+	// 				var DMSlon = allMetaData.GPSLongitude;
+	// 				var lon= ConvertDMSToDD(DMSlon[0],DMSlon[1],DMSlon[2],allMetaData.GPSLongitudeRef);
+	// 				console.log(lat);
+	// 				console.log(lon);
+	// 				console.log(testFilePath);
+	// 				var obj = new Object();
+	// 				obj.lat = lat;
+	// 				obj.lng = lon;
+	// 				obj.thumbnail = testFilePath;
+	// 				obj.url= testFilePath;
+	// 				obj.video="";
+	// 				obj.caption="";            
+	// 				obj_s = JSON.stringify(obj);
+	// 				console.log(obj_s);
+	// 				var b = Array();
+	// 				b.push(obj_s);
+	// 				//photoLayer.add(b).addTo(map);
+	// 				console.log(b);
+	// 				//map.fitBounds(photoLayer.getBounds());
+	// 			});
+	// 		};
+	// 		image.src = URL.createObjectURL(http.response);
+
+	// 	}
+	// };
+	// http.send();
+	// console.log(obj_s);
+	// console.log("aa");
 	// var a = new Array();
 	// a.push(obj_s);
 	// console.log(a);
 	// var a = {"lat":35.23489777777778,"lng":129.08212388888887,"thumbnail":"./data/Photo-A.jpg","url":"./data/Photo-A.jpg","video":"","caption":""};
-	var c = {"lat":35.23489777777778,"lng":129.08212388888887,"thumbnail":"./data/Photo-A.jpg","url":"./data/Photo-A.jpg","video":"","caption":""};
+	//var c = {"lat":35.23489777777778,"lng":129.08212388888887,"thumbnail":"./data/Photo-A.jpg","url":"./data/Photo-A.jpg","video":"","caption":""};
 	
 	
 	// reqwest({
